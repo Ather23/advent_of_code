@@ -1,7 +1,14 @@
 #![feature(iter_advance_by)]
 
 use core::num;
-use std::{ fs::{ read_to_string }, io::{}, default, collections::{ HashMap, HashSet }, usize };
+use std::{
+    fs::{ read_to_string },
+    io::{},
+    default,
+    collections::{ HashMap, HashSet },
+    usize,
+    cmp::min,
+};
 
 #[derive(Debug, PartialEq)]
 enum Cube {
@@ -16,17 +23,30 @@ enum Cube {
     },
 }
 
-#[derive(Debug)]
-enum BagState {
-    Red {
-        count: i8,
-    },
-    Green {
-        count: i8,
-    },
-    Blue {
-        count: i8,
-    },
+struct Bag {
+    bag: HashMap<String, u64>,
+}
+
+impl Bag {
+    pub fn new() -> Self {
+        Bag {
+            bag: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, color: String, new_count: u64) {
+        match self.bag.get(&color) {
+            Some(count) => {
+                if count < &new_count {
+                    // println!("Color: {} Inserted {:?}", &color, (count, new_count));
+                    self.bag.insert(color, new_count);
+                }
+            }
+            None => {
+                self.bag.insert(color, new_count);
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -37,7 +57,7 @@ struct Game {
 
 fn main() {
     println!("Starting..");
-    let games: usize = read_to_string("problem1.txt")
+    let games: u64 = read_to_string("problem1.txt")
         .unwrap()
         .lines()
         .map(|line| { parse_file(&String::from(line)) })
@@ -46,7 +66,7 @@ fn main() {
     println!("Answer: {}", games);
 }
 
-fn parse_file(game_string: &String) -> usize {
+fn parse_file(game_string: &String) -> u64 {
     let mut moves_vec: Vec<Vec<Cube>> = Vec::new();
 
     // Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
@@ -56,58 +76,27 @@ fn parse_file(game_string: &String) -> usize {
     );
 
     let game_idx = &game_string[space..colon].trim().to_string();
-    // println!("Game {game_idx}");
     let move_string: &str = &game_string[colon + 2..game_string.len()].trim();
-    // println!("Move {move_string}");
+
+    let mut result: u64 = 0;
+    let mut bag: Bag = Bag::new();
 
     for moves in move_string.split(';') {
         for cubes in moves.split(';') {
-            let mut cubez: Vec<Cube> = Vec::new();
             for cube in cubes.split(',') {
                 let cube_info: Vec<&str> = cube.trim().split(' ').collect();
-                // println!("Cube info: {:?}", &cube_info);
                 let color = cube_info.last().unwrap().trim();
                 let count_str = cube_info.first().unwrap().trim();
-                let count = count_str.to_string().parse::<i8>().unwrap();
-
-                match color {
-                    "blue" => {
-                        cubez.push(Cube::Blue { count: count });
-                        if count > 14 {
-                            return 0;
-                        }
-                    }
-                    "red" => {
-                        cubez.push(Cube::Red { count: count });
-                        if count > 12 {
-                            return 0;
-                        }
-                    }
-                    "green" => {
-                        cubez.push(Cube::Green { count: count });
-                        if count > 13 {
-                            return 0;
-                        }
-                    }
-                    _ => {
-                        panic!("{color} Not found ");
-                    }
-                }
+                let count = count_str.to_string().parse::<u64>().unwrap();
+                bag.insert(color.to_string(), count);
             }
-            moves_vec.push(cubez);
         }
     }
+    result = bag.bag.values().fold(1, |acc, &value| acc * value);
+    // println!("Idx: {} Bag: {:?}", game_idx, &bag.bag);
+    // println!("Result: {}", result);
 
-    return game_idx.parse::<usize>().unwrap();
-    // return Game {
-    //     id: game_idx.parse::<usize>().unwrap(),
-    //     moves: moves_vec,
-    // };
-}
-
-fn game_idx(game_string: String) -> String {
-    let idx = game_string.split(' ').last().unwrap();
-    return idx.to_string();
+    return result;
 }
 
 #[cfg(test)]
